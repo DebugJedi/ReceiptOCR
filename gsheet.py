@@ -31,3 +31,16 @@ def append_to_sheet(data: dict):
         sheet.append_row(header)
 
     sheet.append_row(row)
+
+
+
+if __name__ == "__main__":
+    test_data = {
+        "store_name": "Local Test Store",
+        "date": "2025-11-17",
+        "total": 19.99,
+        "raw_text": "This is a local test receipt."
+    }
+
+    append_to_sheet(test_data)
+    print("✅ Row appended. Check your Google Sheet.")

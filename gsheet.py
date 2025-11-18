@@ -3,7 +3,11 @@ from google.oauth2.service_account import Credentials
 import gspread
 from config import spreadsheet_id
 
-CREDENTIALS_PATH = "/secrets/receipt-credentials.json"
+CREDENTIALS_PATH = os.getenv(
+    "GOOGLE_CREDS_PATH",              # on Render you'll set this
+    "secrets/receipt-credentials.json"  # local default
+)
+
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SPREADSHEET_ID = spreadsheet_id

@@ -1,3 +1,4 @@
 config.py
 myenv
-reciptextractapp-d6f82cb7e59f.json
+*.json
+secrets

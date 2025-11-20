@@ -2,3 +2,6 @@ config.py
 myenv
 *.json
 secrets
+*_test.py
+.env
+* copy.py

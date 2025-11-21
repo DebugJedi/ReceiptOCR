@@ -5,3 +5,6 @@ secrets
 *_test.py
 .env
 * copy.py
+__pycache__/
+*.pyc
+*.pyo

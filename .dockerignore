@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+.env
+myenv/
+venv/
+*.md
+*_test.py
+* copy.py
+*copy.py
+.DS_Store
+secrets/
+config.py

@@ -11,7 +11,7 @@ SPREADSHEET_ID = os.getenv("spreadsheet_id")
 
 BASE_DIR = Path(__file__).resolve().parent
 
-env_cred = os.getenv("GOOGLE_CREDS_PATH")
+env_cred = os.getenv("GOOGLE_CREDS_JSON")
 if env_cred:
     CREDENTIALS_PATH = Path(env_cred)
     if not CREDENTIALS_PATH.is_absolute():

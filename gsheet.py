@@ -21,8 +21,6 @@ else:
 
 SHEET_NAME = "Reciepts"
 
-print("CREDENTIALS_PATH =", CREDENTIALS_PATH)
-print("SPREADSHEET_ID =", SPREADSHEET_ID)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 

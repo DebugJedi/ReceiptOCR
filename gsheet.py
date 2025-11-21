@@ -1,9 +1,10 @@
-import os
+import os,json, tempfile
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime
+
 
 load_dotenv()
 
@@ -11,13 +12,29 @@ SPREADSHEET_ID = os.getenv("spreadsheet_id")
 
 BASE_DIR = Path(__file__).resolve().parent
 
-env_cred = os.getenv("GOOGLE_CREDS_JSON")
-if env_cred:
-    CREDENTIALS_PATH = Path(env_cred)
-    if not CREDENTIALS_PATH.is_absolute():
-        CREDENTIALS_PATH = BASE_DIR / CREDENTIALS_PATH
+google_cred = os.getenv("GOOGLE_CREDS_JSON")
+if google_cred:
+    try:
+        cred_dict = json.loads(google_cred)
+        temp_file = tempfile.NamedTemporaryFile(mode="w", suffix='.json', delete=False)
+        json.dump(cred_dict, temp_file)
+        temp_file.close()
+        CREDENTIALS_PATH = Path(temp_file.name)
+        print(f"☑️ Using GOOGLE_CREDS_JSON from environment")
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse GOOGLE_CREDS_JSON: {e}" )
+        CREDENTIALS_PATH = None
 else:
-    CREDENTIALS_PATH = BASE_DIR / "secrets" / "receipt-credentials.json"
+    env_cred = os.getenv("GOOGLE_CREDS_PATH")
+    if env_cred:
+        CREDENTIALS_PATH = Path(env_cred)
+        if not CREDENTIALS_PATH.is_absolute():
+            CREDENTIALS_PATH = BASE_DIR / CREDENTIALS_PATH
+    else:
+        CREDENTIALS_PATH = BASE_DIR / "secrets" / "receipt-credentials.json"
+    print(f"✅ Using credentials file: {CREDENTIALS_PATH}")
+
+    
 
 SHEET_NAME = "Reciepts"
 

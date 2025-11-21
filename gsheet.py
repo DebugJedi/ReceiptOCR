@@ -162,11 +162,13 @@ def append_to_sheet(data: dict):
                 item_price,
                 payment_method,
                 card_last_4,
-                total,
+                
                 raw_text if idx == 1 else "",  # Only include raw text on first item to save space
             ]
             values.append(row)
             print(f"      {idx}. {item_name}: ${item_price}")
+        lst_row = [receipt_id, timestamp, store_name, receipt_date, "Total", total, payment_method, card_last_4]
+        values.append(lst_row)
     else:
         # No items found - create one summary row
         print("   ⚠️  No items found, creating summary row")

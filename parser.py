@@ -1,81 +1,127 @@
 """
-Hybrid parser: Uses OCR text + Vision API for best accuracy
+Final optimized parser - uses Vision API with better compression and prompts
 """
 import os
+import base64
 from dotenv import load_dotenv
 import anthropic
 import json
 from datetime import datetime
+from PIL import Image
+import io
 
 load_dotenv()
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-def parse_with_ocr_text(ocr_text: str) -> dict:
+def compress_image_smart(image_bytes: bytes) -> bytes:
     """
-    Use Claude to parse OCR text with strict accuracy requirements.
+    Smart compression that maintains text readability
+    """
+    # Target under 4 MB for safety (base64 adds ~33% overhead)
+    target_size = 4 * 1024 * 1024
+    
+    if len(image_bytes) <= target_size:
+        print(f"   ✓ Image OK: {len(image_bytes) / 1024 / 1024:.2f} MB")
+        return image_bytes
+    
+    print(f"   📦 Compressing: {len(image_bytes) / 1024 / 1024:.2f} MB → 4 MB")
+    
+    image = Image.open(io.BytesIO(image_bytes))
+    
+    # Convert to RGB
+    if image.mode in ('RGBA', 'P', 'LA'):
+        image = image.convert('RGB')
+    
+    # Calculate resize ratio
+    ratio = (target_size / len(image_bytes)) ** 0.5
+    new_size = (int(image.width * ratio * 0.95), int(image.height * ratio * 0.95))
+    
+    print(f"   📐 Resize: {image.width}x{image.height} → {new_size[0]}x{new_size[1]}")
+    
+    image = image.resize(new_size, Image.Resampling.LANCZOS)
+    
+    # Save with high quality
+    output = io.BytesIO()
+    image.save(output, format='JPEG', quality=92, optimize=True)
+    
+    result = output.getvalue()
+    print(f"   ✓ Final: {len(result) / 1024 / 1024:.2f} MB")
+    
+    return result
+
+
+def parse_receipt_image(image_bytes: bytes) -> dict:
+    """
+    Parse receipt using Claude Vision with optimized prompts
     """
     
-    prompt = f"""You are analyzing OCR-extracted text from a receipt. Extract ACCURATE information.
+    # Compress
+    image_bytes = compress_image_smart(image_bytes)
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+    
+    # Shorter, clearer prompt (saves tokens!)
+    prompt = """Extract receipt data as JSON. Read carefully and use EXACT values from the image.
 
-CRITICAL RULES:
-1. Use ONLY the information present in the text below
-2. DO NOT invent or guess any data
-3. Item prices are usually at the end of each line (after $)
-4. Watch for "2 @ $3.99" which means 2 items at $3.99 each
-5. Verify the total matches approximately the sum of items
+Format:
+{
+  "receipt_id": "trans number",
+  "store_name": "store name",  
+  "date": "YYYY-MM-DD",
+  "total": 38.90,
+  "payment_method": "VISA",
+  "card_last_4": "1234",
+  "items": [
+    {"name": "ITEM NAME", "price": 3.99}
+  ]
+}
 
-OCR TEXT:
-{ocr_text}
+Rules:
+- Copy item names EXACTLY as shown
+- Match each item to its price on the receipt
+- If "Items in Transaction: 10" is shown, extract 10 items
+- Use null if you cannot read something clearly
+- For dates like "11-17-2025", convert to "2025-11-17"
 
-Extract and return ONLY this JSON (no other text):
-{{
-    "receipt_id": "transaction number from receipt",
-    "store_name": "store name",
-    "date": "YYYY-MM-DD",
-    "total": 0.00,
-    "payment_method": "VISA/MASTERCARD/etc",
-    "card_last_4": "last 4 digits",
-    "items": [
-        {{"name": "exact item name", "price": 0.00}}
-    ]
-}}
-
-If you cannot determine a value, use null."""
+Return only JSON, no other text."""
 
     try:
-        print("🔍 Parsing OCR text with AI...")
+        print("🔍 Analyzing with Claude Vision...")
         
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+            max_tokens=1500,  # Reduced from 2000
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": image_base64,
+                        },
+                    },
+                    {"type": "text", "text": prompt}
+                ],
+            }],
         )
         
         response_text = message.content[0].text.strip()
-        
-        print(f"\n🤖 AI Response:\n{response_text}\n")
         
         # Extract JSON
         if "```json" in response_text:
             start = response_text.find("```json") + 7
             end = response_text.find("```", start)
-            if end == -1:
-                response_text = response_text[start:].strip()
-            else:
-                response_text = response_text[start:end].strip()
+            response_text = response_text[start:end if end != -1 else None].strip()
         elif response_text.startswith("```"):
             lines = response_text.split("\n")
             response_text = "\n".join(lines[1:-1]) if len(lines) > 2 else response_text
         
-        response_text = response_text.strip()
+        parsed_data = json.loads(response_text.strip())
         
-        parsed_data = json.loads(response_text)
-        
-        # Ensure all expected fields exist
-        parsed_data.setdefault("receipt_id", None)
+        # Set defaults
+        parsed_data.setdefault("receipt_id", datetime.now().strftime("%Y%m%d%H%M%S"))
         parsed_data.setdefault("store_name", None)
         parsed_data.setdefault("date", None)
         parsed_data.setdefault("total", None)
@@ -83,36 +129,31 @@ If you cannot determine a value, use null."""
         parsed_data.setdefault("card_last_4", None)
         parsed_data.setdefault("items", [])
         
-        # Generate fallback receipt ID if none found
-        if not parsed_data["receipt_id"]:
-            parsed_data["receipt_id"] = datetime.now().strftime("%Y%m%d%H%M%S")
-        
         # Validate items
-        valid_items = []
-        for item in parsed_data.get("items", []):
-            if item.get("price") and item.get("price") > 0 and item.get("name"):
-                valid_items.append(item)
-        
+        valid_items = [
+            item for item in parsed_data["items"]
+            if item.get("price") and item.get("price") > 0 and item.get("name")
+        ]
         parsed_data["items"] = valid_items
-        
-        print(f"✅ Parsed successfully:")
-        print(f"   Receipt ID: {parsed_data.get('receipt_id')}")
-        print(f"   Store: {parsed_data.get('store_name')}")
-        print(f"   Date: {parsed_data.get('date')}")
-        print(f"   Total: ${parsed_data.get('total')}")
-        print(f"   Payment: {parsed_data.get('payment_method')} {parsed_data.get('card_last_4')}")
-        print(f"   Valid items: {len(valid_items)}")
-        
-        if valid_items:
-            print(f"\n   Items extracted:")
-            for item in valid_items:
-                print(f"      • {item['name']}: ${item['price']}")
-        print()
+
+        print(f"✅ Extracted: {parsed_data.get('store_name')} - {len(valid_items)} items - ${parsed_data.get('total')}")
         
         return parsed_data
         
+    except anthropic.RateLimitError as e:
+        print(f"⚠️  Rate limit hit. Wait 1 minute and try again.")
+        print(f"   Error: {e}")
+        return {
+            "receipt_id": datetime.now().strftime("%Y%m%d%H%M%S"),
+            "store_name": "RATE_LIMIT_ERROR",
+            "date": None,
+            "total": None,
+            "payment_method": None,
+            "card_last_4": None,
+            "items": [],
+        }
     except Exception as e:
-        print(f"❌ Hybrid parsing error: {e}\n")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return {

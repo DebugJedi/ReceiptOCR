@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from PIL import Image
 
 # Import vision parser (the good one!)
-from parser import parse_with_ocr_text
+from parser import parse_receipt_image
 from gsheet import append_to_sheet
 
 load_dotenv()
@@ -87,7 +87,7 @@ async def process_receipt(
         
         # Parse with Claude Vision - IMPORTANT: Pass image_bytes!
         logger.info("🤖 Analyzing receipt with Claude Vision...")
-        parsed = parse_with_ocr_text(image_bytes)
+        parsed = parse_receipt_image(image_bytes)
         
         # Append to Google Sheets
         logger.info("📊 Appending to Google Sheets...")

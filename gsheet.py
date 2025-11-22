@@ -50,10 +50,10 @@ HEADER_ROW = [
     "Item Name", 
     "Unit Price",
     "Quantity",
-    "Tax"
+    "Tax",
     "Item Price", 
     "Payment Method",
-    "Card Last 4"
+    "Card Last 4",
 ]
 
 

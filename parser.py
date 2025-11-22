@@ -1,15 +1,12 @@
 """
-Final optimized parser - uses Vision API with better compression and prompts
+Enhanced parser - extracts quantity, unit price, and taxes
 """
 import os
 import base64
-
-import anthropic
 import json
 from datetime import datetime
 from PIL import Image
 import io
-
 
 try:
     from dotenv import load_dotenv
@@ -17,91 +14,100 @@ try:
 except ImportError:
     pass
 
-
+import anthropic
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+
 def compress_image_smart(image_bytes: bytes) -> bytes:
-    """
-    Smart compression that maintains text readability
-    """
-    # Target under 4 MB for safety (base64 adds ~33% overhead)
+    """Smart compression that maintains text readability"""
     target_size = 4 * 1024 * 1024
     
     if len(image_bytes) <= target_size:
         print(f"   ✓ Image OK: {len(image_bytes) / 1024 / 1024:.2f} MB")
         return image_bytes
     
-    print(f"   📦 Compressing: {len(image_bytes) / 1024 / 1024:.2f} MB → 4 MB")
+    print(f"   📦 Compressing: {len(image_bytes) / 1024 / 1024:.2f} MB")
     
     image = Image.open(io.BytesIO(image_bytes))
     
-    # Convert to RGB
     if image.mode in ('RGBA', 'P', 'LA'):
         image = image.convert('RGB')
     
-    # Calculate resize ratio
     ratio = (target_size / len(image_bytes)) ** 0.5
     new_size = (int(image.width * ratio * 0.95), int(image.height * ratio * 0.95))
-    
-    print(f"   📐 Resize: {image.width}x{image.height} → {new_size[0]}x{new_size[1]}")
-    
     image = image.resize(new_size, Image.Resampling.LANCZOS)
     
-    # Save with high quality
     output = io.BytesIO()
     image.save(output, format='JPEG', quality=92, optimize=True)
     
     result = output.getvalue()
-    print(f"   ✓ Final: {len(result) / 1024 / 1024:.2f} MB")
-    
+    print(f"   ✓ Compressed: {len(result) / 1024 / 1024:.2f} MB")
     return result
 
 
 def parse_receipt_image(image_bytes: bytes) -> dict:
-    """
-    Parse receipt using Claude Vision with optimized prompts
-    """
+    """Parse receipt with enhanced item details including quantity and tax"""
     
-    # Compress
     image_bytes = compress_image_smart(image_bytes)
     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     
-    # Shorter, clearer prompt (saves tokens!)
-    prompt = """Extract receipt data as JSON. Read carefully and use EXACT values from the image.
+    prompt = """Analyze this receipt and extract ALL information as JSON.
 
-    
+EXTRACT THESE FIELDS:
+- receipt_id: Transaction number (look for "TRANS" near bottom)
+- store_name: Store name at top
+- date: Date in YYYY-MM-DD format
+- subtotal: Amount before tax (if shown)
+- tax: Tax amount
+- total: Final total
+- payment_method: VISA/MASTERCARD/etc
+- card_last_4: Last 4 digits of card
 
-Format:
+FOR EACH ITEM, EXTRACT:
+- name: Item name exactly as shown
+- quantity: Number of items (default 1 if not specified)
+- unit_price: Price per single unit
+- line_total: Total for this line (quantity × unit_price)
+
+IMPORTANT:
+- For items like "5 @ $1.19", quantity=5, unit_price=1.19, line_total=5.95
+- For items like "8 @ $0.29", quantity=8, unit_price=0.29, line_total=2.32
+- For single items, quantity=1, unit_price and line_total are the same
+- Look for tax line (usually shows "Tax: $X.XX @ X.XX%")
+
+Return ONLY valid JSON:
 {
-  "receipt_id": "trans number",
-  "store_name": "store name",  
-  "date": "YYYY-MM-DD",
-  "subtotal": Amount before tax (if shown),
-  tax: Tax amount,
-  "total": Final total amount including taxes,
-  "payment_method": "VISA",
-  "card_last_4": "1234",
-  "items": [
-    {"name": "ITEM NAME", "unit price": 3.99, "itemized_tax": .65 (if shown), "quantity": 2, "price":7.98 }
-  ]
-}
-
-Rules:
-- Copy item names EXACTLY as shown
-- Match each item to its price on the receipt
-- If "Items in Transaction: 10" is shown, extract 10 items
-- Use null if you cannot read something clearly
-- For dates like "11-17-2025", convert to "2025-11-17"
-
-Return only JSON, no other text."""
+    "receipt_id": "56594",
+    "store_name": "TRADER JOE'S",
+    "date": "2025-11-20",
+    "subtotal": 26.76,
+    "tax": 0.37,
+    "total": 27.13,
+    "payment_method": "VISA",
+    "card_last_4": "8728",
+    "items": [
+        {
+            "name": "CAULIFLOWER EACH",
+            "quantity": 1,
+            "unit_price": 2.99,
+            "line_total": 2.99
+        },
+        {
+            "name": "ONIONS RED JUMBO EACH",
+            "quantity": 5,
+            "unit_price": 1.19,
+            "line_total": 5.95
+        }
+    ]
+}"""
 
     try:
         print("🔍 Analyzing with Claude Vision...")
         
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1500,  # Reduced from 2000
+            max_tokens=2000,
             messages=[{
                 "role": "user",
                 "content": [
@@ -143,28 +149,20 @@ Return only JSON, no other text."""
         parsed_data.setdefault("items", [])
         
         # Validate items
-        valid_items = [
-            item for item in parsed_data["items"]
-            if item.get("price") and item.get("price") > 0 and item.get("name")
-        ]
+        valid_items = []
+        for item in parsed_data["items"]:
+            if item.get("name") and item.get("line_total"):
+                item.setdefault("quantity", 1)
+                item.setdefault("unit_price", item.get("line_total"))
+                valid_items.append(item)
+        
         parsed_data["items"] = valid_items
-
-        print(f"✅ Extracted: {parsed_data.get('store_name')} - {len(valid_items)} items - ${parsed_data.get('total')}")
+        
+        print(f"✅ Extracted: {parsed_data.get('store_name')} - {len(valid_items)} items")
+        print(f"   Subtotal: ${parsed_data.get('subtotal')} | Tax: ${parsed_data.get('tax')} | Total: ${parsed_data.get('total')}")
         
         return parsed_data
         
-    except anthropic.RateLimitError as e:
-        print(f"⚠️  Rate limit hit. Wait 1 minute and try again.")
-        print(f"   Error: {e}")
-        return {
-            "receipt_id": datetime.now().strftime("%Y%m%d%H%M%S"),
-            "store_name": "RATE_LIMIT_ERROR",
-            "date": None,
-            "total": None,
-            "payment_method": None,
-            "card_last_4": None,
-            "items": [],
-        }
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
@@ -173,6 +171,8 @@ Return only JSON, no other text."""
             "receipt_id": datetime.now().strftime("%Y%m%d%H%M%S"),
             "store_name": None,
             "date": None,
+            "subtotal": None,
+            "tax": None,
             "total": None,
             "payment_method": None,
             "card_last_4": None,

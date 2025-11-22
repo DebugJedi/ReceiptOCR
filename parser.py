@@ -83,7 +83,7 @@ Format:
   "payment_method": "VISA",
   "card_last_4": "1234",
   "items": [
-    {"name": "ITEM NAME", "unit price": 3.99, "itemized_tax": .65, "quantity": 2, "price":7.98 }
+    {"name": "ITEM NAME", "unit price": 3.99, "itemized_tax": .65 (if shown), "quantity": 2, "price":7.98 }
   ]
 }
 

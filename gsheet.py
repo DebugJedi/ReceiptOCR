@@ -34,7 +34,7 @@ else:
         CREDENTIALS_PATH = BASE_DIR / "secrets" / "receipt-credentials.json"
     print(f"✅ Using credentials file: {CREDENTIALS_PATH}")
 
-    
+
 
 SHEET_NAME = "Reciepts"
 
@@ -48,11 +48,12 @@ HEADER_ROW = [
     "Store Name", 
     "Receipt Date", 
     "Item Name", 
+    "Unit Price",
+    "Quantity",
+    "Tax"
     "Item Price", 
     "Payment Method",
-    "Card Last 4",
-    "Receipt Total",
-    "Raw Text"
+    "Card Last 4"
 ]
 
 
@@ -125,6 +126,8 @@ def append_to_sheet(data: dict):
     receipt_id = data.get("receipt_id") or "UNKNOWN"
     store_name = data.get("store_name") or "Unknown Store"
     receipt_date = data.get("date") or ""
+    subtotal = data.get("subtotal") or ""
+    tax = data.get("tax") or ""
     total = data.get("total") or ""
     payment_method = data.get("payment_method") or ""
     card_last_4 = data.get("card_last_4") or ""
@@ -147,6 +150,9 @@ def append_to_sheet(data: dict):
         for idx, item in enumerate(items, 1):
             item_name = item.get("name", "").strip()
             item_price = item.get("price")
+            item_unitprice = item.get("unit price")
+            item_tax = item.get("itemized_tax")
+            item_quantiy = item.get("quantity")
             
             # Skip items without valid name or price
             if not item_name:
@@ -174,6 +180,9 @@ def append_to_sheet(data: dict):
                 store_name,
                 receipt_date,
                 item_name,
+                item_unitprice,
+                item_quantiy,
+                item_tax,
                 item_price,
                 payment_method,
                 card_last_4,
@@ -182,7 +191,7 @@ def append_to_sheet(data: dict):
             ]
             values.append(row)
             print(f"      {idx}. {item_name}: ${item_price}")
-        lst_row = [receipt_id, timestamp, store_name, receipt_date, "Total", total, payment_method, card_last_4]
+        lst_row = [receipt_id, timestamp, store_name, receipt_date, "Total",None,None,tax, total, payment_method, card_last_4]
         values.append(lst_row)
     else:
         # No items found - create one summary row

@@ -3,14 +3,21 @@ Final optimized parser - uses Vision API with better compression and prompts
 """
 import os
 import base64
-from dotenv import load_dotenv
+
 import anthropic
 import json
 from datetime import datetime
 from PIL import Image
 import io
 
-load_dotenv()
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -63,16 +70,20 @@ def parse_receipt_image(image_bytes: bytes) -> dict:
     # Shorter, clearer prompt (saves tokens!)
     prompt = """Extract receipt data as JSON. Read carefully and use EXACT values from the image.
 
+    
+
 Format:
 {
   "receipt_id": "trans number",
   "store_name": "store name",  
   "date": "YYYY-MM-DD",
-  "total": 38.90,
+  "subtotal": Amount before tax (if shown),
+  tax: Tax amount,
+  "total": Final total amount including taxes,
   "payment_method": "VISA",
   "card_last_4": "1234",
   "items": [
-    {"name": "ITEM NAME", "price": 3.99}
+    {"name": "ITEM NAME", "unit price": 3.99, "itemized_tax": .65, "quantity": 2, "price":7.98 }
   ]
 }
 
@@ -124,6 +135,8 @@ Return only JSON, no other text."""
         parsed_data.setdefault("receipt_id", datetime.now().strftime("%Y%m%d%H%M%S"))
         parsed_data.setdefault("store_name", None)
         parsed_data.setdefault("date", None)
+        parsed_data.setdefault("subtotal", None)
+        parsed_data.setdefault("tax", None)
         parsed_data.setdefault("total", None)
         parsed_data.setdefault("payment_method", None)
         parsed_data.setdefault("card_last_4", None)

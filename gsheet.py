@@ -149,9 +149,9 @@ def append_to_sheet(data: dict):
         # One row for each item
         for idx, item in enumerate(items, 1):
             item_name = item.get("name", "").strip()
-            item_price = item.get("price")
-            item_unitprice = item.get("unit price")
-            item_tax = item.get("itemized_tax")
+            item_price = item.get("line_total")  # FIXED: Changed from "price" to "line_total"
+            item_unitprice = item.get("unit_price")  # FIXED: Changed from "unit price" to "unit_price"
+            item_tax = item.get("itemized_tax")  # This may not exist in parser output
             item_quantiy = item.get("quantity")
             
             # Skip items without valid name or price

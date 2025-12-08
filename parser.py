@@ -224,6 +224,9 @@ Now analyze this receipt and return complete JSON.
         parsed_data.setdefault("receipt_id", datetime.now().strftime("%Y%m%d%H%M%S"))
         parsed_data.setdefault("store_name", None)
         parsed_data.setdefault("date", None)
+        parsed_data.setdefault("address", None)
+        parsed_data.setdefault("phone", None)
+        parsed_data.setdefault("date", None)
         parsed_data.setdefault("subtotal", None)
         parsed_data.setdefault("tax", None)
         parsed_data.setdefault("total", None)
@@ -241,8 +244,15 @@ Now analyze this receipt and return complete JSON.
         
         parsed_data["items"] = valid_items
         
-        print(f"✅ Extracted: {parsed_data.get('store_name')} - {len(valid_items)} items")
-        print(f"   Subtotal: ${parsed_data.get('subtotal')} | Tax: ${parsed_data.get('tax')} | Total: ${parsed_data.get('total')}")
+        print(f"\n📝 Items extracted:")
+        for idx, item in enumerate(valid_items, 1):
+            qty = item.get('quantity', 1)
+            unit_price = item.get('unit_price', 0)
+            line_total = item.get('line_total', 0)
+            if qty > 1:
+                print(f"   {idx}. {item['name']}: {qty} × ${unit_price} = ${line_total}")
+            else:
+                print(f"   {idx}. {item['name']}: ${line_total}")
         
         return parsed_data
         
@@ -253,6 +263,8 @@ Now analyze this receipt and return complete JSON.
         return {
             "receipt_id": datetime.now().strftime("%Y%m%d%H%M%S"),
             "store_name": None,
+            "address": None,
+            "phone": None,
             "date": None,
             "subtotal": None,
             "tax": None,
@@ -261,3 +273,27 @@ Now analyze this receipt and return complete JSON.
             "card_last_4": None,
             "items": [],
         }
+
+if __name__ == "__main__":
+    # Test with any receipt
+    import sys
+    if len(sys.argv) > 1:
+        image_path = sys.argv[1]
+        print(f"\n🧪 Testing universal parser with: {image_path}\n")
+        
+        with open(image_path, 'rb') as f:
+            image_bytes = f.read()
+        
+        result = parse_receipt_image(image_bytes)
+        
+        print("\n" + "="*70)
+        print("FULL PARSED RESULT:")
+        print("="*70)
+        print(json.dumps(result, indent=2))
+    else:
+        print("Usage: python universal_parser.py <image_path>")
+
+
+
+
+

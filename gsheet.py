@@ -54,6 +54,7 @@ HEADER_ROW = [
     "Item Price", 
     "Payment Method",
     "Card Last 4",
+    "Street Address"
 ]
 
 
@@ -125,6 +126,7 @@ def append_to_sheet(data: dict):
     # Extract common receipt info
     receipt_id = data.get("receipt_id") or "UNKNOWN"
     store_name = data.get("store_name") or "Unknown Store"
+    address = data.get("address") or ""
     receipt_date = data.get("date") or ""
     subtotal = data.get("subtotal") or ""
     tax = data.get("tax") or ""
@@ -186,6 +188,7 @@ def append_to_sheet(data: dict):
                 item_price,
                 payment_method,
                 card_last_4,
+                address,
                 
                 raw_text if idx == 1 else "",  # Only include raw text on first item to save space
             ]
@@ -206,6 +209,7 @@ def append_to_sheet(data: dict):
             payment_method,
             card_last_4,
             total,
+            address,
             raw_text,
         ]
         values.append(row)

@@ -52,62 +52,145 @@ def parse_receipt_image(image_bytes: bytes) -> dict:
     image_bytes = compress_image_smart(image_bytes)
     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     
-    prompt = """Analyze this receipt and extract ALL information as JSON.
+    prompt = """
+    You are an expert at reading receipts from ANY store (Target, Walmart, CVS, Trader Joe's, Costco, Grocery stores, restuarants, Pharmacies, etc.)
+    
+    Carefully analyze this receipt and extract ALL information.
 
-EXTRACT THESE FIELDS:
-- receipt_id: Transaction number (look for "TRANS" near bottom)
-- store_name: Store name at top
-- date: Date in YYYY-MM-DD format
-- subtotal: Amount before tax (if shown)
-- tax: Tax amount
-- total: Final total
-- payment_method: VISA/MASTERCARD/etc
-- card_last_4: Last 4 digits of card
+=== STEP 1: STORE & LOCATION INFO ===
+Extract:
+- Store name (e.g., "TARGET", "CVS PHARMACY", "TRADER JOE'S", "WALMART")
+- Full address including:
+  * Street address (e.g., "11831 HAWTHORNE BLVD")
+  * City
+  * State
+  * ZIP code
+  * Phone number (if shown)
 
-FOR EACH ITEM, EXTRACT:
-- name: Item name exactly as shown
-- quantity: Number of items (default 1 if not specified)
-- unit_price: Price per single unit
-- line_total: Total for this line (quantity × unit_price)
+Combine into one address string like: "11831 Hawthorne Blvd, Hawthorne, CA 90250"
 
-IMPORTANT:
-- For items like "5 @ $1.19", quantity=5, unit_price=1.19, line_total=5.95
-- For items like "8 @ $0.29", quantity=8, unit_price=0.29, line_total=2.32
-- For single items, quantity=1, unit_price and line_total are the same
-- Look for tax line (usually shows "Tax: $X.XX @ X.XX%")
+=== STEP 2: TRANSACTION INFO ===
+Look for (labels vary by store):
+- Receipt/Transaction ID: 
+  * Target: Look for transaction numbers
+  * CVS: "TRN#", "TRANS"
+  * Walmart: "TC#" 
+  * Others: Any transaction/receipt identifier
+  
+- Date: Can be in various formats (MM/DD/YY, YYYY-MM-DD, DD/MM/YYYY)
+  Convert to YYYY-MM-DD format
+  
+- Payment info:
+  * Method: VISA, MASTERCARD, AMEX, DISCOVER, DEBIT, CASH, APPLE PAY, etc.
+  * Card last 4 digits (look for ****1234 or similar patterns)
 
-Return ONLY valid JSON:
+=== STEP 3: EXTRACT ALL ITEMS ===
+
+**CRITICAL: Read EVERY line item on the receipt. Do not skip any items.**
+
+For EACH item, extract:
+- **name**: Product name EXACTLY as shown (even if abbreviated)
+- **quantity**: The number of items purchased
+- **unit_price**: Price per single item  
+- **line_total**: Total for this line (quantity × unit_price)
+
+**HOW TO IDENTIFY QUANTITY:**
+
+✅ ACTUAL QUANTITIES (extract these):
+- "5 @" or "5@" → quantity = 5
+- "3 x" or "3x" → quantity = 3  
+- "QTY 2" → quantity = 2
+- "2 BANANAS" (number before product name) → quantity = 2
+- If nothing indicates multiple items → quantity = 1
+
+❌ SIZE/WEIGHT INDICATORS (these are NOT quantities):
+- "3Z", "3OZ", "4OZ" = size in ounces → quantity = 1
+- "16.9", "16.9oz" = size → quantity = 1
+- "24P", "24PK" = package size (24-pack) → quantity = 1
+- "2CT" = item comes in 2-count package → quantity = 1
+- "1.5LB", "0.5KG" = weight → quantity = 1
+- Any measurement unit → quantity = 1
+
+**EXAMPLES:**
+
+Receipt Line: "BL SNTV 50 LTN 3Z    11.69"
+→ {"name": "BL SNTV 50 LTN 3Z", "quantity": 1, "unit_price": 11.69, "line_total": 11.69}
+Why? 3Z is the SIZE (3 ounces), not quantity
+
+Receipt Line: "ONIONS RED 5 @ 1.19"  
+→ {"name": "ONIONS RED", "quantity": 5, "unit_price": 1.19, "line_total": 5.95}
+Why? "5 @" means 5 items at $1.19 each
+
+Receipt Line: "CVS PURFD WTR 24P 16.9    5.99"
+→ {"name": "CVS PURFD WTR 24P 16.9", "quantity": 1, "unit_price": 5.99, "line_total": 5.99}
+Why? 24P (24-pack) and 16.9 (oz) are SIZE indicators
+
+Receipt Line: "BANANAS 3 @ $0.29"
+→ {"name": "BANANAS", "quantity": 3, "unit_price": 0.29, "line_total": 0.87}
+
+Receipt Line: "MILK GALLON    3.99"
+→ {"name": "MILK GALLON", "quantity": 1, "unit_price": 3.99, "line_total": 3.99}
+
+**ITEMS TO EXCLUDE (not products):**
+- "BOTTLE DEPOSIT", "CRV", "BAG FEE"
+- "COUPON", "DISCOUNT" 
+- Tax lines (but extract tax amount separately)
+- Payment/tender lines
+
+=== STEP 4: TOTALS ===
+Extract (labels vary by store):
+- Subtotal: Pre-tax amount ("SUBTOTAL", "SUB TOTAL", "MERCHANDISE")
+- Tax: Tax amount ("TAX", "SALES TAX", "CA TAX", "STATE TAX")  
+- Total: Final amount ("TOTAL", "AMOUNT DUE", "BALANCE DUE")
+
+=== OUTPUT FORMAT ===
+
+Return ONLY valid JSON (no other text):
+
 {
-    "receipt_id": "56594",
-    "store_name": "TRADER JOE'S",
-    "date": "2025-11-20",
-    "subtotal": 26.76,
-    "tax": 0.37,
-    "total": 27.13,
+    "receipt_id": "3743",
+    "store_name": "CVS PHARMACY",
+    "address": "11831 Hawthorne Blvd, Hawthorne, CA 90250",
+    "phone": "(310) 679-3668",
+    "date": "2023-01-10",
+    "subtotal": 59.40,
+    "tax": 6.48,
+    "total": 64.88,
     "payment_method": "VISA",
-    "card_last_4": "8728",
+    "card_last_4": "9284",
     "items": [
         {
-            "name": "CAULIFLOWER EACH",
+            "name": "BL SNTV 50 LTN 3Z",
             "quantity": 1,
-            "unit_price": 2.99,
-            "line_total": 2.99
+            "unit_price": 11.69,
+            "line_total": 11.69
         },
         {
-            "name": "ONIONS RED JUMBO EACH",
+            "name": "ONIONS RED",
             "quantity": 5,
             "unit_price": 1.19,
             "line_total": 5.95
         }
     ]
-}"""
+}
+
+**IMPORTANT REMINDERS:**
+1. Extract EVERY single item - count them first
+2. Product names: Copy EXACTLY as shown (abbreviations and all)
+3. Quantity defaults to 1 unless explicitly stated otherwise
+4. Sizes/weights are NOT quantities
+5. Include full address with street, city, state, ZIP
+6. Double-check you didn't miss any items
+
+Now analyze this receipt and return complete JSON.
+"""
 
     try:
         print("🔍 Analyzing with Claude Vision...")
         
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2000,
+            max_tokens=4000,
             messages=[{
                 "role": "user",
                 "content": [

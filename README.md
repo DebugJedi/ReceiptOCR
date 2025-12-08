@@ -468,4 +468,4 @@ Project Link: [ReceiptOCR](https://github.com/DebugJedi/ReceiptOCR)
 - [ ] Batch processing
 - [ ] Mobile app
 
-See [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
+See [ROADMAP.md](/docs/) for detailed plans.

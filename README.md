@@ -469,7 +469,3 @@ Project Link: [ReceiptOCR](https://github.com/DebugJedi/ReceiptOCR)
 - [ ] Mobile app
 
 See [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
-
----
-
-**Made with ❤️ and AI**

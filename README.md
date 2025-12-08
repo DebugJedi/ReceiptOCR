@@ -231,9 +231,9 @@ print(response.json())
     "receipt_id": "3743",
     "store_name": "CVS PHARMACY",
     "date": "2023-01-10",
-    "total": 64.88,
+    "total": $****,
     "payment_method": "VISA",
-    "card_last_4": "9284",
+    "card_last_4": "**84",
     "item_count": 11
   },
   "sheet_update": {
@@ -449,17 +449,9 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## 📧 Contact
 
-**Priyank** - [Your Email/LinkedIn/Website]
+**Priyank** - debugjedi@gmail.com
 
-Project Link: [https://github.com/yourusername/receipt-ocr](https://github.com/yourusername/receipt-ocr)
-
----
-
-## ⭐ Star History
-
-If you find this project helpful, please consider giving it a star!
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/receipt-ocr&type=Date)](https://star-history.com/#yourusername/receipt-ocr&Date)
+Project Link: [ReceiptOCR](https://github.com/DebugJedi/ReceiptOCR)
 
 ---
 

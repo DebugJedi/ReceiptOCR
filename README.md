@@ -389,7 +389,7 @@ Tested and working with:
 
 **Solutions:**
 - System should handle this automatically
-- If persistent, [report the receipt format](https://github.com/DebugJedi/ReceiptOCR/issues)
+- If persistent, [report the issue](https://github.com/DebugJedi/ReceiptOCR/issues)
 
 ---
 

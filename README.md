@@ -6,7 +6,7 @@ Snap a photo with your iPhone → Instantly populated Google Sheet with all item
 
 [![Cloud Run](https://img.shields.io/badge/Google_Cloud-Run-4285F4?logo=google-cloud)](https://cloud.google.com/run)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Claude AI](https://img.shields.io/badge/Claude-Sonnet_4-000000)](https://www.anthropic.com/claude)
+[![Claude AI](https://img.shields.io/badge/Claude-Sonnet_4-500000)](https://www.anthropic.com/claude)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

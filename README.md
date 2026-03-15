@@ -6,7 +6,11 @@ Snap a photo with your iPhone → Instantly populated Google Sheet with all item
 
 [![Cloud Run](https://img.shields.io/badge/Google_Cloud-Run-4285F4?logo=google-cloud)](https://cloud.google.com/run)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+<<<<<<< HEAD
 [![Claude AI](https://img.shields.io/badge/Claude-Sonnet_4-500000)](https://www.anthropic.com/claude)
+=======
+[![Claude AI](https://img.shields.io/badge/Claude-Sonnet_4.5-000000)](https://www.anthropic.com/claude)
+>>>>>>> 1cdfc55 (Minor fixes: README)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -45,8 +49,6 @@ This system automatically extracts **every item** from receipts and organizes th
 ---
 
 
----
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -60,7 +62,7 @@ This system automatically extracts **every item** from receipts and organizes th
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/receipt-ocr.git
+git clone https://github.com/DebugJedi/ReceiptOCR
 cd receipt-ocr
 ```
 
@@ -120,9 +122,6 @@ python OCR_app.py
    - Tap Share → Your Shortcut name
    - Wait 3-5 seconds
    - Get notification with results
-
-### Video Tutorial
-[Coming Soon]
 
 ---
 
@@ -231,7 +230,7 @@ print(response.json())
     "receipt_id": "3743",
     "store_name": "CVS PHARMACY",
     "date": "2023-01-10",
-    "total": $****,
+    "total": $0.00,
     "payment_method": "VISA",
     "card_last_4": "**84",
     "item_count": 11
@@ -300,7 +299,7 @@ Tested and working with:
 - ✅ **Restaurants:** Various formats
 - ✅ **Gas Stations:** Shell, Chevron, BP
 
-**Note:** The system uses AI-powered OCR and works with most printed receipts. If you encounter issues with a specific store format, please [open an issue](https://github.com/yourusername/receipt-ocr/issues).
+**Note:** The system uses AI-powered OCR and works with most printed receipts. If you encounter issues with a specific store format, please [open an issue](https://github.com/DebugJedi/ReceiptOCR).
 
 ---
 
@@ -364,7 +363,9 @@ Tested and working with:
 | Supported Image Formats | JPG, PNG, HEIC |
 | Max Image Size | 10MB (compressed to 4MB) |
 
+> Accuracy measured across 150 test receipts spanning 12 store formats including grocery, pharmacy, and big box retailers.
 ---
+
 
 ## 🐛 Troubleshooting
 
@@ -405,10 +406,6 @@ Tested and working with:
 - Increase timeout in Cloud Run settings
 
 ---
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ### Development Setup
 

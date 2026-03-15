@@ -11,3 +11,4 @@ __pycache__/
 *config.py
 req.txt
 Documentation
+.DS_Store
